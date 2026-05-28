@@ -36,24 +36,24 @@ export default function PrivacyPolicyPage() {
           </p>
         </section>
 
-        {/* Auth handled by Clerk */}
+        {/* Auth handled by Supabase */}
         <section>
-          <h2 className='text-foreground mb-3 text-xl font-semibold'>Authentication by Clerk</h2>
+          <h2 className='text-foreground mb-3 text-xl font-semibold'>Authentication by Supabase</h2>
           <p className='text-muted-foreground text-base leading-relaxed'>
             Our application uses{' '}
             <a
-              href='https://clerk.com'
+              href='https://supabase.com'
               target='_blank'
               rel='noopener noreferrer'
               className='text-primary font-medium hover:underline'
             >
-              Clerk
+              Supabase
             </a>{' '}
             to handle user authentication securely. All authentication processes, including sign-up,
-            sign-in, and password management, are managed by Clerk. For detailed information about
-            how Clerk processes and protects your data, please review their{' '}
+            sign-in, and password management, are managed by Supabase. For detailed information
+            about how Supabase processes and protects your data, please review their{' '}
             <a
-              href='https://clerk.com/legal/privacy'
+              href='https://supabase.com/privacy'
               target='_blank'
               rel='noopener noreferrer'
               className='text-primary font-medium hover:underline'
@@ -104,7 +104,7 @@ export default function PrivacyPolicyPage() {
 
         {/* Last Updated */}
         <div className='border-border border-t pt-4'>
-          <p className='text-muted-foreground text-sm'>Last updated: February 2026</p>
+          <p className='text-muted-foreground text-sm'>Last updated: May 2026</p>
         </div>
       </div>
     </div>

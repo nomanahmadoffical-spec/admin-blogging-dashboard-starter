@@ -12,7 +12,7 @@ This file provides essential information for AI coding agents working on this pr
 - **Language**: TypeScript 5.7
 - **Styling**: Tailwind CSS v4
 - **UI Components**: shadcn/ui (New York style)
-- **Authentication**: Clerk (with Organizations/Billing support)
+- **Authentication**: Supabase Auth (with @supabase/ssr)
 - **Error Tracking**: Sentry
 - **Charts**: Recharts
 - **Containerization**: Docker (Node.js & Bun Dockerfiles)
@@ -53,10 +53,11 @@ The project follows a feature-based folder structure designed for scalability in
 
 ### Authentication & Authorization
 
-- Clerk for authentication and user management
-- Clerk Organizations for multi-tenant workspaces
-- Clerk Billing for subscription management (B2B)
-- Client-side RBAC for navigation visibility
+- Supabase Auth for authentication and user management
+- Supabase session management via @supabase/ssr
+- Server client: `createClient()` in `src/lib/supabase/server.ts`
+- Browser client: `createClient()` in `src/lib/supabase/client.ts`
+- Client-side RBAC for navigation visibility (simplified from Clerk)
 
 ### Data & APIs
 
@@ -151,7 +152,7 @@ The project follows a feature-based folder structure designed for scalability in
     └── themes/            # Individual theme files
 
 /docs                      # Documentation
-│   ├── clerk_setup.md     # Clerk configuration guide
+│   ├── supabase_setup.md  # Supabase configuration guide
 │   ├── nav-rbac.md        # Navigation RBAC documentation
 │   └── themes.md          # Theme customization guide
 
@@ -200,17 +201,11 @@ bun run prepare      # Install Husky hooks
 
 Copy `env.example.txt` to `.env.local` and configure:
 
-### Required for Authentication (Clerk)
+### Required for Authentication (Supabase)
 
 ```env
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_...
-CLERK_SECRET_KEY=sk_...
-
-# Redirect URLs
-NEXT_PUBLIC_CLERK_SIGN_IN_URL="/auth/sign-in"
-NEXT_PUBLIC_CLERK_SIGN_UP_URL="/auth/sign-up"
-NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL="/dashboard/overview"
-NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL="/dashboard/overview"
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 ```
 
 ### Optional for Error Tracking (Sentry)
@@ -222,8 +217,6 @@ NEXT_PUBLIC_SENTRY_PROJECT=your-project
 SENTRY_AUTH_TOKEN=sntrys_...
 NEXT_PUBLIC_SENTRY_DISABLED="false"  # Set to "true" to disable in dev
 ```
-
-**Note**: Clerk supports "keyless mode" - the app works without API keys for initial development.
 
 ---
 
@@ -335,7 +328,7 @@ export const navGroups: NavGroup[] = [
 
 ### Client-Side Filtering
 
-The `useFilteredNavItems()` hook in `src/hooks/use-nav.ts` filters navigation client-side using Clerk's `useOrganization()` and `useUser()` hooks. This is for UX only - actual security checks must happen server-side.
+The `useFilteredNavItems()` hook in `src/hooks/use-nav.ts` filters navigation client-side using Supabase user session. This is for UX only - actual security checks must happen server-side.
 
 ---
 
@@ -343,38 +336,52 @@ The `useFilteredNavItems()` hook in `src/hooks/use-nav.ts` filters navigation cl
 
 ### Protected Routes
 
-Dashboard routes use Clerk's middleware pattern. Pages that require organization:
+Dashboard routes use Supabase middleware for route protection. The middleware in `src/middleware.ts` validates sessions:
 
 ```tsx
-import { auth } from '@clerk/nextjs';
+import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 
 export default async function Page() {
-  const { orgId } = await auth();
-  if (!orgId) redirect('/dashboard/workspaces');
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) redirect('/auth/sign-in');
   // ...
 }
 ```
 
-### Plan/Feature Protection
+### Middleware Protection
 
-Use Clerk's `<Protect>` component for client-side:
+The `src/middleware.ts` file handles session validation and route protection:
+
+- `/dashboard/*` routes redirect to `/auth/sign-in` if no session
+- `/auth/*` routes redirect to `/dashboard/overview` if authenticated
+
+### User Data
+
+Get the current user from Supabase:
 
 ```tsx
-import { Protect } from '@clerk/nextjs';
+// Server component
+const supabase = await createClient();
+const { data: { user } } = await supabase.auth.getUser();
 
-<Protect plan='pro' fallback={<UpgradePrompt />}>
-  <PremiumContent />
-</Protect>;
+// Client component
+const supabase = createClient();
+const { data: { user } } = await supabase.auth.getUser();
 ```
 
-Use `has()` function for server-side checks:
+### Sign In / Sign Out
 
 ```tsx
-import { auth } from '@clerk/nextjs';
+// Sign in
+const { error } = await supabase.auth.signInWithPassword({
+  email, password
+});
 
-const { has } = await auth();
-const hasFeature = has({ feature: 'premium_access' });
+// Sign out
+await supabase.auth.signOut();
 ```
 
 ---
